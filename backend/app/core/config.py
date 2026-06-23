@@ -4,9 +4,11 @@ All values are sourced from environment variables (see .env.example at the repo
 root). Sensible local-dev defaults are provided so the app can boot without a
 .env file (e.g. when running the test suite).
 """
+import json
 from functools import lru_cache
 from typing import List
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -39,7 +41,29 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # Typed as a raw string (not List[str]) because pydantic-settings
+    # auto-JSON-decodes list-typed env vars *before* any validator runs,
+    # so a non-JSON value (a bare URL, a comma-separated list) would
+    # crash the app on startup with a SettingsError. CORS_ORIGINS below
+    # parses this leniently instead.
+    CORS_ORIGINS_RAW: str = Field(
+        default='["http://localhost:5173", "http://127.0.0.1:5173"]',
+        validation_alias="CORS_ORIGINS",
+    )
+
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        # Accepts a JSON array ('["https://a","https://b"]'), a
+        # comma-separated list ("https://a,https://b"), or a single bare
+        # URL ("https://a") so a formatting slip in a hosting provider's
+        # env var UI can't take the whole app down.
+        stripped = self.CORS_ORIGINS_RAW.strip()
+        if stripped.startswith("["):
+            try:
+                return json.loads(stripped)
+            except json.JSONDecodeError:
+                pass
+        return [origin.strip() for origin in stripped.split(",") if origin.strip()]
 
     @property
     def sqlalchemy_database_uri(self) -> str:
