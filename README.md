@@ -134,6 +134,33 @@ The test suite runs against an in-memory SQLite database (via a
 TypeDecorator that maps UUID/JSONB columns to portable types), so it does
 not require Postgres to be running.
 
+## Deploying to Render
+
+A `render.yaml` blueprint at the repo root provisions everything: a free
+Postgres database, a free Redis instance, the backend (Docker web service),
+the Celery worker (Docker background worker), and the frontend (static site
+built with Vite).
+
+1. Push this repo to GitHub (already done if you're reading this on GitHub).
+2. In the Render dashboard: **New +** -> **Blueprint** -> connect this repo.
+   Render reads `render.yaml` and creates all five resources in one go.
+3. Wait for `bughunter-backend` to finish deploying, then copy its URL
+   (shown at the top of its service page, e.g.
+   `https://bughunter-backend-xxxx.onrender.com`).
+4. Open `bughunter-frontend` -> Environment, set `VITE_API_BASE_URL` to
+   `<backend-url>/api/v1`, then trigger **Manual Deploy** -> **Deploy latest
+   commit** (Vite bakes env vars in at build time, so a plain restart isn't
+   enough).
+5. Copy the frontend's URL, open `bughunter-backend` -> Environment, set
+   `CORS_ORIGINS` to `["<frontend-url>"]`, save (this one redeploys
+   automatically).
+6. Once the backend is live, seed demo data via the Render shell on the
+   `bughunter-backend` service: `python seed.py`.
+
+Free-tier notes: Render's free Postgres expires after 90 days, and free web
+services spin down after inactivity (cold start ~30-60s on the next
+request) — fine for a portfolio demo, not for production traffic.
+
 ## Known rough edges
 
 - The frontend's `npm run dev` Docker service mounts the local `frontend/`

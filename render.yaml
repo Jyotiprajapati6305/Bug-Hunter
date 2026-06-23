@@ -1,0 +1,101 @@
+databases:
+  - name: bughunter-postgres
+    plan: free
+    databaseName: bughunter
+    user: bughunter
+
+services:
+  - type: redis
+    name: bughunter-redis
+    plan: free
+    ipAllowList: []
+
+  - type: web
+    name: bughunter-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bughunter-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: bughunter-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: bughunter-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: bughunter-redis
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: CORS_ORIGINS
+        value: '["http://localhost:5173"]'
+        # NOTE: update this to your real frontend URL after the
+        # bughunter-frontend static site is created, e.g.
+        # '["https://bughunter-frontend.onrender.com"]', then save
+        # (Render auto-redeploys the backend on env var change).
+
+  - type: worker
+    name: bughunter-celery-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: celery -A app.tasks.celery_app worker --loglevel=info
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bughunter-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: bughunter-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: bughunter-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: bughunter-redis
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+
+  - type: web
+    name: bughunter-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://bughunter-backend.onrender.com/api/v1
+        # NOTE: update this to match your actual backend service URL
+        # (shown on the bughunter-backend service page) if it differs,
+        # then trigger a manual redeploy of this static site — Vite
+        # bakes env vars in at build time, so changing this value
+        # requires a rebuild, not just a restart.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
