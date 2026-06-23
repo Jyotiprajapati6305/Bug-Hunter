@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #000000;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a2a2a;
+    border-radius: 6px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3a3a3a;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-md border border-border rounded-lg shadow-glass;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-md bg-white text-black px-4 py-2 text-sm font-medium
+      transition-all duration-200 hover:bg-white/90 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-md bg-card border border-border text-foreground px-4 py-2 text-sm font-medium
+      transition-all duration-200 hover:bg-[#202020] hover:border-[#3a3a3a] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .input-field {
+    @apply w-full rounded-md bg-surface border border-border px-3 py-2 text-sm text-foreground placeholder:text-muted
+      transition-colors duration-200 focus:outline-none focus:border-[#4a4a4a] focus:ring-1 focus:ring-[#4a4a4a];
+  }
+
+  .label-text {
+    @apply text-sm font-medium text-muted mb-1.5 block;
+  }
+}
